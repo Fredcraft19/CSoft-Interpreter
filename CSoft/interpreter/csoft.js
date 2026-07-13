@@ -18,7 +18,8 @@ const Token = {
     ADD                 :"¬¬O_ADD¬¬",   // add
     SUB                 :"¬¬O_SUB¬¬",   // subract
     MUL                 :"¬¬O_MUL¬¬",   // multiply
-    DIV                 :"¬¬O_DIV¬¬"    // division
+    DIV                 :"¬¬O_DIV¬¬",   // division
+    POW                 :"¬¬O_POW¬¬"    // power
 }
 
 const Operators = {
@@ -26,10 +27,13 @@ const Operators = {
     "+"             :Token.ADD,
     "-"             :Token.SUB,
     "*"             :Token.MUL,
-    "/"             :Token.DIV
+    "/"             :Token.DIV,
+    "^"             :Token.POW
 }
 
 class CSoft{
+    static debug = false;
+
     // All keywords return true. 
     // no need for .contains()  just do keywords["word"]
     static keywords = {
@@ -115,7 +119,7 @@ class CSoft{
                 case '+':
                     if(equation_word){
                     equation.push(equation_word);
-                    equation_word = "";
+                    equation_word = "";current_word = "";
                     }
                     equation.push(Token.ADD);
                     continue;
@@ -123,22 +127,30 @@ class CSoft{
                 case '-':
                     if(equation_word){
                     equation.push(equation_word);
-                    equation_word = "";}
+                    equation_word = "";current_word = "";}
                     equation.push(Token.SUB);
                     continue;
                     break;
                 case '*':
                     if(equation_word){
                     equation.push(equation_word);
-                    equation_word = "";}
+                    equation_word = "";current_word = "";}
                     equation.push(Token.MUL);
                     continue;
                     break;
                 case '/':
                     if(equation_word){
                     equation.push(equation_word);
-                    equation_word = "";}
+                    equation_word = "";current_word = "";}
                     equation.push(Token.DIV);
+                    continue;
+                    break;
+                case '^':
+                    if(equation_word){
+                    equation.push(equation_word);
+                    equation_word = "";
+                    current_word = "";}
+                    equation.push(Token.POW);
                     continue;
                     break;
 
@@ -220,7 +232,9 @@ class CSoft{
     }
 
     static Equate(equation){    // example equation => [66 ADD 1]
-
+        if(this.debug){
+            console.log("EQUATION:\n" + equation);
+        }
         let term1 = null;
         let term2 = null;
         let oper = null;
@@ -249,6 +263,9 @@ class CSoft{
                             break;
                         case Token.DIV:
                             oper = Token.DIV;
+                            break;
+                        case Token.POW:
+                            oper = Token.POW;
                             break;
                         default:
                             console.error(`unknown value of: -${equation[i]}-`);
@@ -279,6 +296,12 @@ class CSoft{
                             case Token.DIV:
                                 if(term2){
                                 term1 = term1 / term2;}else {term1 = 0}
+                                break;
+                            case Token.POW:
+                                if(this.debug){
+                                    console.log(`RUNNING:\n${term1}^${term2} = ${Math.pow(term1, term2)}`);
+                                }
+                                term1 = Math.pow(term1, term2);
                                 break;
                         }
                         term2 = null;
