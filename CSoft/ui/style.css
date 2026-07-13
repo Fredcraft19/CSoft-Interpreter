@@ -1,0 +1,66 @@
+/*main text classes*/
+
+h{
+    color: rgb(255, 255, 255);
+    margin: 25px;
+    font-size: 36px;
+    font-family: 'Courier New', Courier, monospace;
+}
+p{
+    color: rgb(255, 255, 255);
+    padding: 25px;
+    font-family: 'Courier New', Courier, monospace;
+}
+button{
+    
+    background-color: rgb(100, 100, 100);
+    font-family: 'Courier New', Courier, monospace;
+    border-radius: 5px;
+    width: 100%;
+    height:100%;
+}
+.run-parent{
+    padding: 20px;  
+    width: 9%;
+    height: 25px;
+}
+
+/*custom classes*/
+
+html{
+    background-color: black;
+}
+
+.main{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.editor-parent{
+    border-radius: 25px;
+    border: 1px solid #494949;
+    width: 90%;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.editor{
+    padding: 5px;
+    width: 95%;
+    height: 90%;
+    
+    
+}
+.console{
+    width: 90%;
+    max-height: 90vh;
+    height: 90vh;
+    background-color: rgb(25, 25, 25);
+    border-radius: 25px;
+    overflow: hidden;
+}
+
+/*yes i did just learn how to comment in CSS*/
