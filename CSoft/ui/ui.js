@@ -6,7 +6,7 @@ require.config({
 });
 require(['vs/editor/editor.main'], function () {
     editor = monaco.editor.create(document.getElementById('editor'), {
-        value: `var x = 2;\nx = 9;\nvar c = x + 2;`,
+        value: `var pow = 55 ^ 5;`,
         language: 'csharp',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -19,10 +19,13 @@ run.addEventListener('click', function(){
 
     Memory.Reset();
     CSoft.Reset();
+    CSoft.debug = true;
 
     console.clear();
-
+    let start = performance.now();
     for(let i = 0; i < lines.length; i++){
         CSoft.ExecuteLine(lines[i]);
     }
+    let end = performance.now();
+    console.log(`C~ finished in: ${(end-start).toFixed(3)}ms | ${Math.round((end-start) * 1000)}`);
 });
