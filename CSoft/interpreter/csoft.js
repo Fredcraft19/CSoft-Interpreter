@@ -1,10 +1,9 @@
-// turns code into tokens!
+// ---- csoft.js ----
+//  The interpreter file for C~ (C Soft),
+//  handles all the logic for C~ interpretation,
+//  important storage/memory is in memory.js
 
-// Example lines of code:
-// "int x = 0 + 9"
-
-
-// enum for tokens
+// All Interpreter tokens
 const Token = {
     // ---- Command tokens
     // variables
