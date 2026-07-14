@@ -6,7 +6,7 @@ require.config({
 });
 require(['vs/editor/editor.main'], function () {
     editor = monaco.editor.create(document.getElementById('editor'), {
-        value: `var pow = 55 ^ 5;`,
+        value: `var x = 9;\nvar y = 19;\nvar output = "nullptr";\n\nif(x > y){\n    output = "x>y";\n}\n\nif(y >= x){\n    output = "y>=x";\n}`,
         language: 'csharp',
         theme: 'vs-dark',
         automaticLayout: true,
@@ -28,4 +28,8 @@ run.addEventListener('click', function(){
     }
     let end = performance.now();
     console.log(`C~ finished in: ${(end-start).toFixed(3)}ms | ${Math.round((end-start) * 1000)}`);
+
+    if(Memory.variables["output"]){
+        console.log(`\nC~ Output:\n${Memory.variables["output"].value}`);
+    }
 });
