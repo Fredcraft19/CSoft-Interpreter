@@ -43,21 +43,25 @@ if( 1 < 2 )               {
 var output = "1 < 2";}
 ```
 
-❌
+✅
 ```cs
 if( 1 < 2 )
 {
 var output = "1 < 2";
 }
 ```
-❌
+✅
 ```cs
 if( 1 < 2 )
 {var output = "1 < 2";
 }
 ```
-❌
+✅
 ```cs
 if ( 1 < 2 )               {
 var output = "1 < 2";}
+```
+✅
+```cs
+if(1<2){var output = "1<2";}
 ```
