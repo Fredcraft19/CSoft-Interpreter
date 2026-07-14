@@ -73,6 +73,7 @@ class CSoft{
 
     static object_args = [];
     static object_condition = "";
+    static pending_object = null;
 
     static Reset(){
         this.keywords = {
@@ -190,9 +191,13 @@ class CSoft{
                 case '(':
                     if(qc % 2 != 0) break; 
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
-                    if(this.keywords[current_word]){
+                    let first_word = current_word;
+                    if(!first_word){
+                        first_word = words[0]
+                    }
+                    if(this.keywords[first_word]){
                         writing_equation = true;
-                        main_token = this.keywords[current_word];
+                        main_token = this.keywords[first_word];
                     }   
                     else{
                         console.error("unknown call for keyword? OR FUNCTION WHICH IS WIP!")
@@ -217,9 +222,12 @@ class CSoft{
                 case ')':
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
                     if(qc % 2 == 0 && main_token){
-                        equation.push(equation_word);
+                        equation_word = equation_word.trim();
+                        if(equation_word){
+                            equation.push(equation_word);
+                        }
                         writing_equation = false;
-                        
+                        this.pending_object = new MiniObject(main_token, [equation]);
                         break;
                     }
                     continue;
@@ -227,19 +235,27 @@ class CSoft{
                 case '{':
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
                     if(qc % 2 != 0) break; 
-                    if(main_token){
+                    if(this.pending_object){
+                        
                         Memory.depth++;
-                        switch(main_token){
+                        switch(this.pending_object.Token()){
                             case Token.IF:
-                                Memory.current_nest = new NestingObject(Memory.depth, main_token, [this.Equate(equation)]);
+                                Memory.current_nest = new NestingObject(Memory.depth, this.pending_object.Token(), [this.Equate(this.pending_object.FirstArgs())]);
                                 break;
                             default:
-                                
                                 console.error("Unknown token for a nesting object, Token: ");
-                                console.error(main_token);
+                                console.error(this.pending_object.Token());
                                 break;
 
                         }
+
+                        // Reset because there can be statements on the same line as the IF statement declaration
+                        main_token = null;
+                        current_word = "";
+                        words = [];
+                        writing_equation = false;
+                        equation_word = "";
+                        equation = [];
                         
                         Memory.nest_objects[Memory.depth] = Memory.current_nest;
                         continue;
@@ -352,17 +368,37 @@ class CSoft{
             case Token.CREATE_VAR:
                 name = arg1;
                 value = arg2;
-                if(!Object.hasOwn(Memory.variables, name)){
-                    Memory.variables[name] = new Variable(value);
+                console.log("Making Variable..")
+                if(Memory.current_nest){
+                    if(!Object.hasOwn(Memory.current_nest.local_variables, name)){
+                        Memory.current_nest.local_variables[name] = new Variable(value);
+                        console.log(name + ": made in nest")
+                    }
+                    else{
+                        console.error(`invalid variable name!\nA variable of that name may already exist. Or the name may be a keyword!`);
+                    }
                 }
                 else{
-                    console.error(`invalid variable name!\nA variable of that name may already exist. Or the name may be a keyword!`);
+                    if(!Object.hasOwn(Memory.variables, name)){
+                        Memory.variables[name] = new Variable(value);
+                        console.log(name + ": made in global")
+                    }
+                    else{
+                        console.error(`invalid variable name!\nA variable of that name may already exist. Or the name may be a keyword!`);
+                    }
                 }
+                
 
                 break;
             case Token.CHANGE_VAR:
                 name = arg1;
                 value = arg2;
+                if(Memory.current_nest){
+                    if(Object.hasOwn(Memory.current_nest.local_variables, name)){
+                        Memory.current_nest.local_variables[name].value = arg2;
+                    }
+                }
+
                 if(Object.hasOwn(Memory.variables, name)){
                     Memory.variables[name].value = arg2;
                 }
