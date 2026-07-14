@@ -22,46 +22,30 @@ if(x > 5){
     var output = "x > 5";
 }
 ```
-### Examples of IF statements
-✅
+You can write the IF statements like in any other language hopefully, like the examples below:
 ```cs
-if(1 < 2){
-    var output = "1 < 2";
-}
-```
-✅
-```cs
-if( 1 < 2 )      {
-  var output = "1 < 2";
+// Super compact
+if(1>0){var output = "1>0";}
 
-}
-```
-
-✅
-```cs
-if( 1 < 2 )               {
-var output = "1 < 2";}
-```
-
-✅
-```cs
-if( 1 < 2 )
+// C#-Like
+if (1 > 0)
 {
-var output = "1 < 2";
+    var output = "1>0";
 }
-```
-✅
-```cs
-if( 1 < 2 )
-{var output = "1 < 2";
+
+// C++-Like?
+if (1 > 0){
+    var output = "1>0";
 }
-```
-✅
-```cs
-if ( 1 < 2 )               {
-var output = "1 < 2";}
-```
-✅
-```cs
-if(1<2){var output = "1<2";}
+
+// Honestly, I'd be very suprised if you can somehow break the IF statement without trying to. Even this weirdness works:
+
+if              (            6           >         2                )
+
+                {
+            var        output              =           "1>0"       ;
+    }
+
+// One known bug/error is when 0 is used in variables or conditions. I think its something to do with the Equate() method and boolean,
+// its because 0 is quite weird in Javascript so yeah. It might be fixed..
 ```
