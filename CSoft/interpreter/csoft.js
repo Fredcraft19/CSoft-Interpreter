@@ -15,7 +15,7 @@ const Token = {
 
     // nested objects
     IF                  :Symbol("IF"),
-
+    WHILE               :Symbol("WHILE"),
 
     METHOD              :Symbol("METHOD"),
 
@@ -66,7 +66,8 @@ class CSoft{
     // no need for .contains()  just do keywords["word"]
     static keywords = {
         "var"       :Token.CREATE_VAR,
-        "if"        :Token.IF
+        "if"        :Token.IF,
+        "while"     :Token.WHILE
         // FOR CUSTOM CLASSES ADD TO THIS DURING RUNTIME!!
     };
 
@@ -74,14 +75,31 @@ class CSoft{
     static object_condition = "";
     static pending_object = null;
 
+    // while loop recording
+    static recording_start_nest = 0;
+    static recording = false;
+    static recording_buffer = "";
+    static recording_brace_depth = 0;
+
+    static looping_from_while = false;
+
     static Reset(){
         this.keywords = {
             "var"       :Token.CREATE_VAR,
-            "if"        :Token.IF
+            "if"        :Token.IF,
+            "while"     :Token.WHILE
         };
+        this.object_args = [];
+        this.object_condition = "";
+        this.pending_object = null;
+        this.recording_start_nest = 0;
+        this.recording = false;
+        this.recording_buffer = "";
     }
 
     static ExecuteLine(line){
+        console.log(Memory.depth);
+
         let main_token = null;
         let current_word = "";
         let words = [];
@@ -96,6 +114,7 @@ class CSoft{
 
         for(let i = 0; i < line.length; i++){  // only 1 for char's in line, for maximum speed~
             let char = line[i];
+            if(this.recording) this.recording_buffer+=char;
 
             switch(char){
                 case '/':   // comment
@@ -199,7 +218,7 @@ class CSoft{
                         main_token = this.keywords[first_word];
                     }   
                     else{
-                        console.error("unknown call for keyword? OR FUNCTION WHICH IS WIP!")
+                        console.error("keyword or method (methods dont exist yet..)?")
                     }
                     continue;
                     break;
@@ -232,17 +251,28 @@ class CSoft{
                     continue;
 
                 case '{':
+                    if(this.recording) this.recording_brace_depth++;
+                    console.log(this.recording_brace_depth);
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
+                    
                     if(qc % 2 != 0) break; 
                     if(this.pending_object){
-                        
                         Memory.depth++;
                         switch(this.pending_object.Token()){
                             case Token.IF:
-                                Memory.current_nest = new NestingObject(Memory.depth, this.pending_object.Token(), [this.Equate(this.pending_object.FirstArgs())]);
+                                console.log(this.pending_object.Args());
+                                Memory.current_nest = new NestingObject(Memory.depth, this.pending_object.Token(), [this.pending_object.FirstArgs()]);
+                                break;
+                            case Token.WHILE:
+                                // Record lines between { }.
+                                this.recording = true;
+                                this.recording_start_nest = Memory.depth;
+                                Memory.current_nest = new NestingObject(Memory.depth, this.pending_object.Token(), [this.pending_object.FirstArgs()]); // this.pending_object.FirstArgs() is the raw condition, eg "x > 2" and not "true" or "false" so it can be reevaluated during while looptime
+                                Memory.current_nest.skip = true;
+                                this.recording_brace_depth++; // because this is on a { right now
+                                
                                 break;
                             default:
-                                console.error("Unknown token for a nesting object, Token: ");
                                 console.error(this.pending_object.Token());
                                 break;
 
@@ -256,29 +286,75 @@ class CSoft{
                         equation_word = "";
                         equation = [];
                         
+                        console.log("Made nesting object at depth: " + Memory.depth);
                         Memory.nest_objects[Memory.depth] = Memory.current_nest;
+
                         continue;
                     }
                     break;
                 case '}':
+                    if(this.recording) this.recording_brace_depth--;
+                    console.log(this.recording_brace_depth);
                     if(qc % 2 != 0) break; 
-                    if(Memory.depth > 0){
-                        delete Memory.nest_objects[Memory.depth];
 
-                        Memory.depth--;
+                    console.log("1");
+                    if(Memory.current_nest.token == Token.WHILE){
+                        console.log("2");
+                        if(this.recording_brace_depth <= 0){
+                            console.log("3");
+                            this.recording_buffer = this.recording_buffer.substring(0, this.recording_buffer.length-1);
+                            this.recording = false;
 
-                        if(Memory.depth == 0){
-                            Memory.current_nest = null;
+                            let while_code = this.recording_buffer;
+                            let while_condition = Memory.current_nest.condition; // current_nest WILL get overwritten at looptime if there are any other nested objects inside the loop!
+                            let c = 0;
+
+                            console.log("ended while loop on line: " + line);
+
+                            // reset temp memory
+                            main_token = null;
+                            current_word = "";
+                            words = [];
+                            writing_equation = false;
+                            equation_word = "";
+                            equation = [];
+                            Memory.current_nest.skip = !this.Equate(while_condition);
+                            console.log(Memory.current_nest.skip + "| !" + this.Equate(while_condition))
+                            console.log(while_condition);
+                            while(this.Equate(while_condition)){
+                                c++; // is that a C++ '&'?
+                                if(c > 50){
+                                    break;
+                                }
+                                console.log(while_condition);
+                                CSoft.ExecuteLine(while_code);
+                            }
+                        }
+                    }
+
+                    if(!this.recording){
+                        if(Memory.depth > 0){
+                            delete Memory.nest_objects[Memory.depth];
+
+                            Memory.depth--;
+
+                            if(Memory.depth == 0){
+                                Memory.current_nest = null;
+                            }
+                            else{
+                                Memory.current_nest = Memory.nest_objects[Memory.depth];
+                            }
+
                         }
                         else{
-                            Memory.current_nest = Memory.nest_objects[Memory.depth];
+                            console.error("'}' is wrong place? cant get out of depth 0 aka global!");
                         }
-                        
                     }
                     else{
-                        console.error("'}' is wrong place? cant get out of depth 0 aka global!");
+                        console.warn("} ignored because we're recording for a while loop.");
                     }
                     continue;
+                    
                     break;
                 
 
@@ -294,7 +370,10 @@ class CSoft{
                     }
                     
                     if(!main_token){    // if a main token wasn't previously assigned, see if we can make one now!
-                        if(this.keywords[current_word]){
+                        if (this.keywords[words[0]]){
+                            main_token = this.keywords[words[0]];
+                        }
+                        else if(this.keywords[current_word]){
                             main_token = this.keywords[current_word];
                         }
                     }
@@ -302,9 +381,11 @@ class CSoft{
                     if(main_token){
                         switch(main_token){
                             case Token.CREATE_VAR:
+                                console.log(equation)
                                 if(words.length >= 3) this.ExecuteToken(main_token, words[1], this.Equate(equation));
                                 break;
                             case Token.CHANGE_VAR:
+                                console.log(equation)
                                 if(words.length >= 2) this.ExecuteToken(main_token, words[0], this.Equate(equation));
                                 break;
                             default:
@@ -314,7 +395,7 @@ class CSoft{
                     }
                     else{
                         console.error("unknown command or declaration.");
-                    }
+                    }                   
                     
                     // Reset for new statement. as its after a ';'
                     main_token = null;
@@ -367,11 +448,9 @@ class CSoft{
             case Token.CREATE_VAR:
                 name = arg1;
                 value = arg2;
-                console.log("Making Variable..")
                 if(Memory.current_nest){
                     if(!Object.hasOwn(Memory.current_nest.local_variables, name)){
                         Memory.current_nest.local_variables[name] = new Variable(value);
-                        console.log(name + ": made in nest")
                     }
                     else{
                         console.error(`invalid variable name!\nA variable of that name may already exist. Or the name may be a keyword!`);
@@ -380,25 +459,21 @@ class CSoft{
                 else{
                     if(!Object.hasOwn(Memory.variables, name)){
                         Memory.variables[name] = new Variable(value);
-                        console.log(name + ": made in global")
                     }
                     else{
                         console.error(`invalid variable name!\nA variable of that name may already exist. Or the name may be a keyword!`);
                     }
                 }
-                
-
                 break;
+            
             case Token.CHANGE_VAR:
+                console.log(arg1 + " = " + arg2);
                 name = arg1;
                 value = arg2;
-                if(Memory.current_nest){
-                    if(Object.hasOwn(Memory.current_nest.local_variables, name)){
-                        Memory.current_nest.local_variables[name].value = arg2;
-                    }
+                if(Memory.current_nest && Object.hasOwn(Memory.current_nest.local_variables, name)){
+                    Memory.current_nest.local_variables[name].value = arg2;
                 }
-
-                if(Object.hasOwn(Memory.variables, name)){
+                else if(Object.hasOwn(Memory.variables, name)){
                     Memory.variables[name].value = arg2;
                 }
                 else{
@@ -414,6 +489,7 @@ class CSoft{
         let term1 = null;
         let term2 = null;
         let oper = null;
+
         for(let i = 0; i < equation.length; i++){
             let value = null;
             
@@ -424,7 +500,7 @@ class CSoft{
                 if(typeof equation[i] == "symbol"){    // token spotted!!!
                     oper = equation[i];
                 }
-                else if(Number(equation[i])){    // is number!
+                else if(!isNaN(Number(equation[i])) && equation[i] !== null && equation[i] !== "") {    // is number incl '0'  
                     value = Number(equation[i]);
                 }
                 else if(Object.hasOwn(Memory.variables, equation[i])){
@@ -442,13 +518,13 @@ class CSoft{
                     console.error(Memory.variables);
                 }
             }
-            if(value){
-                if(!term1){
+            if(value !== null){
+                if (term1 === null) {
                     term1 = value;
                 }
-                else if(!term2){
+                else if (term2 === null) {
                     term2 = value;
-                    if(term1 && term2){
+                    if(term1 !== null && term2 !== null){
                         switch(oper){
                             case Token.ADD:
                                 term1 = term1 + term2; break;
