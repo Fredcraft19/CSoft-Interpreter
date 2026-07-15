@@ -14,18 +14,27 @@ class NestingObject{
     local_variables = {};
     skip = false;
 
+    local_code = "";
+
+    condition = "";
+
     constructor(depth, token, args = []){ // args is for parameters in function or a condition
         this.depth = depth;
         this.token = token;
 
         if(this.token == Token.IF){ // for every if statement, args[0] will be the condition
-            if(args[0] == true){
+            if(CSoft.Equate(args[0]) == true){
                 this.skip = false;
             }
             else {
                 this.skip = true;
             }
+            console.log("RUN IF? " + CSoft.Equate(args[0]));
         }
+        if(this.token == Token.WHILE){
+            this.condition = args[0];
+        }
+
     }
 }
 
@@ -62,5 +71,8 @@ class Memory{
         this.variables = {
             "csoft_version":new Variable("0.0.1")
         };
+        this.depth = 0;
+        this.nest_objects = {};
+        this.current_nest = null;
     }
 }
