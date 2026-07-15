@@ -15,11 +15,17 @@ To change the value of a varaible just do:
 x = 9;
 ```
 
-## IF statements
-To create an IF statement, just do:
+## IF & WHILE statements
+To create an IF/WHILE statement, just do:
 ```cs
 if(x > 5){
     var output = "x > 5";
+}
+```
+or
+```cs
+while(i > 1){
+    var output = "This is a while loop.";
 }
 ```
 You can write the IF statements like in any other language hopefully, like the examples below:
