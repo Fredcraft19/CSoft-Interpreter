@@ -29,7 +29,6 @@ class NestingObject{
             else {
                 this.skip = true;
             }
-            console.log("RUN IF? " + CSoft.Equate(args[0]));
         }
         if(this.token == Token.WHILE){
             this.condition = args[0];
