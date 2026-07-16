@@ -28,30 +28,17 @@ while(i > 1){
     var output = "This is a while loop.";
 }
 ```
-You can write the IF statements like in any other language hopefully, like the examples below:
+You can write the IF statements like in any other language hopefully
+
+## METHODS
+To declare a method, just do:
 ```cs
-// Super compact
-if(1>0){var output = "1>0";}
-
-// C#-Like
-if (1 > 0)
-{
-    var output = "1>0";
+method methodName(parameter1, parameter2){
+    // code here
 }
-
-// C++-Like?
-if (1 > 0){
-    var output = "1>0";
-}
-
-// Honestly, I'd be very suprised if you can somehow break the IF statement without trying to. Even this weirdness works:
-
-if              (            6           >         2                )
-
-                {
-            var        output              =           "1>0"       ;
-    }
-
-// One known bug/error is when 0 is used in variables or conditions. I think its something to do with the Equate() method and boolean,
-// its because 0 is quite weird in Javascript so yeah. It might be fixed..
 ```
+To call a method, do:
+```cs
+methodName(2, 3);
+```
+
