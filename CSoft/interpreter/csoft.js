@@ -10,14 +10,12 @@ const Token = {
     CREATE_VAR          :Symbol("Create Var"), // creating a variable
     CHANGE_VAR          :Symbol("Set Var"), // changing a variable
 
-    IN_BRK              :Symbol("New Bracket"),   // found a {  so its nested+1
-    OUT_BRK             :Symbol("End Bracket"),  // found a } so its nested-1 -> Delete all variables of indent lvl
-
     // nested objects
     IF                  :Symbol("IF"),
     WHILE               :Symbol("WHILE"),
 
     METHOD              :Symbol("METHOD"),
+    MADE_METHOD         :Symbol("MADE_METHOD"),
 
     
     // ---- Operator tokens
@@ -67,7 +65,8 @@ class CSoft{
     static keywords = {
         "var"       :Token.CREATE_VAR,
         "if"        :Token.IF,
-        "while"     :Token.WHILE
+        "while"     :Token.WHILE,
+        "method"    :Token.METHOD
         // FOR CUSTOM CLASSES ADD TO THIS DURING RUNTIME!!
     };
 
@@ -75,11 +74,18 @@ class CSoft{
     static object_condition = "";
     static pending_object = null;
 
+    static new_method_name = "";
+
     // while loop recording
     static recording_start_nest = 0;
     static recording = false;
     static recording_buffer = "";
     static recording_brace_depth = 0;
+
+    static parameter_start_index = 0;
+    static parameter_end_index = 0;
+
+    static set_parameters = [];
 
     static looping_from_while = false;
 
@@ -87,7 +93,8 @@ class CSoft{
         this.keywords = {
             "var"       :Token.CREATE_VAR,
             "if"        :Token.IF,
-            "while"     :Token.WHILE
+            "while"     :Token.WHILE,
+            "method"    :Token.METHOD
         };
         this.object_args = [];
         this.object_condition = "";
@@ -95,11 +102,16 @@ class CSoft{
         this.recording_start_nest = 0;
         this.recording = false;
         this.recording_buffer = "";
+        
+        this.parameter_start_index = 0;
+        this.parameter_end_index = 0;
+        this.set_parameters = [];
     }
 
     static ExecuteLine(line){
         let main_token = null;
         let current_word = "";
+        let last_word = ""; // the word before current_word
         let words = [];
 
         let writing_equation = false;
@@ -109,7 +121,6 @@ class CSoft{
         let target_variable = "";
 
         let qc = 0; // qc == quote count or " count.
-
         for(let i = 0; i < line.length; i++){  // only 1 for char's in line, for maximum speed~
             let char = line[i];
             if(this.recording) this.recording_buffer+=char;
@@ -138,6 +149,7 @@ class CSoft{
                     
                     if(current_word){
                         words.push(current_word);
+                        last_word = current_word;
                         current_word = "";
                     }
                     if(equation_word){
@@ -193,7 +205,7 @@ class CSoft{
                         words.push(current_word);
                         
                         if(writing_equation && equation_word.trim().length != 0) equation.push(equation_word); // only add values to the equation if thier not blank space (what str.trim() does)
-                        
+                        last_word = current_word;
                         current_word = "";
                         equation_word = ""
                     }
@@ -211,10 +223,27 @@ class CSoft{
                     if(!first_word){
                         first_word = words[0]
                     }
-                    if(this.keywords[first_word]){
+
+                    if(this.keywords[first_word] && this.keywords[first_word] != Token.MADE_METHOD){
+                        this.set_parameters = [];
                         writing_equation = true;
                         main_token = this.keywords[first_word];
-                    }   
+                        words.push(current_word);
+                        current_word = "";
+                        this.object_args = [];
+                    }
+                    else if(this.keywords[last_word] && this.keywords[last_word] == Token.METHOD){  // making a method
+                        main_token = this.keywords[last_word];
+                        this.new_method_name = current_word;
+                        words.push(current_word);
+                        current_word = "";
+                        this.parameter_start_index = words.length;
+                    }
+                    else if(this.keywords[first_word] == Token.MADE_METHOD){    // calling a method
+                        writing_equation = true;
+                        main_token = this.keywords[first_word];
+                        this.new_method_name = first_word; // just a reused variable. its the name of the method thats being called..
+                    }
                     else{
                         console.error("keyword or method (methods dont exist yet..)?")
                     }
@@ -224,30 +253,71 @@ class CSoft{
                 case ',':
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
                     if(qc % 2 == 0 && main_token){
-                        if(main_token == Token.METHOD) this.object_args.push(current_word); // calling a method!
-                        else{   // while/if -> they have 1 args which is the condition
-                            if(writing_equation){
+                        if(main_token == Token.METHOD){ // making a method!
+                            this.object_args.push(current_word);
+                            words.push(current_word);
+                            current_word = ""; 
+                            
+                            continue;
+                        }
+                        if(main_token == Token.MADE_METHOD){    // calling a method & getting its parameters
+                            equation_word = equation_word.trim();
+                            if(equation_word){
                                 equation.push(equation_word);
                             }
-                        }
-                        break;
-
+                            equation_word = "";
+                            this.set_parameters.push(this.Equate(equation)); 
+                            equation = [];
+                        }                      
                     }
                     continue;
+                    break;
 
                 case ')':
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
                     if(qc % 2 == 0 && main_token){
-                        equation_word = equation_word.trim();
-                        if(equation_word){
-                            equation.push(equation_word);
+                        if(main_token != Token.METHOD && main_token != Token.MADE_METHOD){
+                            equation_word = equation_word.trim();
+                            if(equation_word){
+                                equation.push(equation_word);
+                            }
+                            writing_equation = false;
+                            this.pending_object = new MiniObject(main_token, [equation]);
                         }
-                        writing_equation = false;
-                        this.pending_object = new MiniObject(main_token, [equation]);
+                        else if(main_token == Token.MADE_METHOD){   // calling the method
+                            equation_word = equation_word.trim();
+                            if(equation_word){
+                                equation.push(equation_word);
+                            }
+                            this.set_parameters.push(this.Equate(equation)); 
+                            writing_equation = false;
+
+                            this.pending_object = new MiniObject(main_token, this.set_parameters);
+                        }
+                        else{ // declaring the method
+                            this.object_args.push(current_word);
+                            words.push(current_word);
+                            current_word = ""; 
+
+                            this.parameter_end_index = words.length - 1;
+
+
+                            let parameters = [];
+
+                            for(let x = this.parameter_start_index; x < this.parameter_end_index+1; x++){
+                                parameters.push(words[x]);
+                            }
+                            
+                            if(this.parameter_end_index == this.parameter_start_index){
+                                parameters.push(words[this.parameter_start_index]);
+                            }
+
+
+                            this.pending_object = new MiniObject(main_token, parameters);
+                        }
                         break;
                     }
                     continue;
-
                 case '{':
                     if(this.recording) this.recording_brace_depth++;
                     if(Memory.current_nest && Memory.current_nest.skip) continue;
@@ -266,7 +336,14 @@ class CSoft{
                                 Memory.current_nest = new NestingObject(Memory.depth, this.pending_object.Token(), [this.pending_object.FirstArgs()]); // this.pending_object.FirstArgs() is the raw condition, eg "x > 2" and not "true" or "false" so it can be reevaluated during while looptime
                                 Memory.current_nest.skip = true;
                                 this.recording_brace_depth++; // because this is on a { right now
-                                
+                                break;
+                            case Token.METHOD:
+                                // copy Token.WHILE for recording
+                                this.recording = true;
+                                this.recording_start_nest = Memory.depth;
+                                Memory.current_nest = new MethodObject(Memory.depth, this.pending_object.Token(), this.pending_object.Args()); // this.pending_object.FirstArgs() is the raw condition, eg "x > 2" and not "true" or "false" so it can be reevaluated during while looptime
+                                Memory.current_nest.skip = true;
+                                this.recording_brace_depth++;
                                 break;
                             default:
                                 console.error(this.pending_object.Token());
@@ -277,6 +354,7 @@ class CSoft{
                         // Reset because there can be statements on the same line as the IF statement declaration
                         main_token = null;
                         current_word = "";
+                        last_word = "";
                         words = [];
                         writing_equation = false;
                         equation_word = "";
@@ -290,8 +368,7 @@ class CSoft{
                 case '}':
                     if(this.recording) this.recording_brace_depth--;
                     if(qc % 2 != 0) break; 
-
-                    if(Memory.current_nest.token == Token.WHILE){
+                    if(Memory.current_nest.token == Token.WHILE){   // making a while loop!
                         if(this.recording_brace_depth <= 0){
                             this.recording_buffer = this.recording_buffer.substring(0, this.recording_buffer.length-1);
                             this.recording = false;
@@ -304,6 +381,7 @@ class CSoft{
                             // reset temp memory
                             main_token = null;
                             current_word = "";
+                            last_word = "";
                             words = [];
                             writing_equation = false;
                             equation_word = "";
@@ -317,6 +395,27 @@ class CSoft{
                                 }
                                 CSoft.ExecuteLine(while_code);
                             }
+                        }
+                    }
+                    else if(Memory.current_nest.token == Token.METHOD){ // making a method!
+                        if(this.recording_brace_depth <= 0){
+                            this.recording_buffer = this.recording_buffer.substring(0, this.recording_buffer.length-1);
+                            this.recording = false;
+                            let mobj = Memory.current_nest; // mobj = method object
+                            mobj.local_code = this.recording_buffer;
+                            mobj.name = this.new_method_name;
+                            this.new_method_name = "";
+                            Memory.methods[mobj.name] = mobj;
+                            this.keywords[mobj.name] = Token.MADE_METHOD;
+
+                            // reset temp memory
+                            main_token = null;
+                            current_word = "";
+                            last_word = "";
+                            words = [];
+                            writing_equation = false;
+                            equation_word = "";
+                            equation = [];
                         }
                     }
 
@@ -371,6 +470,22 @@ class CSoft{
                             case Token.CHANGE_VAR:
                                 if(words.length >= 2) this.ExecuteToken(main_token, words[0], this.Equate(equation));
                                 break;
+                            case Token.MADE_METHOD:
+                                let mobj = Memory.methods[this.new_method_name]; // mobj = method object
+                                let old_nest = Memory.current_nest;
+                                Memory.current_nest = mobj;
+                                mobj.skip = false;
+                                Memory.depth++;
+                                Memory.nest_objects[Memory.depth] = Memory.current_nest;
+
+
+                                mobj.Run(this.pending_object.Args());
+
+                                Memory.current_nest = old_nest;
+                                delete Memory.nest_objects[Memory.depth]
+                                Memory.depth--;
+                                this.parameters = [];
+                                break;
                             default:
                                 console.error("Invalid main token!");
 
@@ -383,6 +498,7 @@ class CSoft{
                     // Reset for new statement. as its after a ';'
                     main_token = null;
                     current_word = "";
+                    last_word = "";
                     words = [];
                     writing_equation = false;
                     equation_word = "";
@@ -484,6 +600,9 @@ class CSoft{
                 }
                 else if(!isNaN(Number(equation[i])) && equation[i] !== null && equation[i] !== "") {    // is number incl '0'  
                     value = Number(equation[i]);
+                }
+                else if(Memory.current_nest && Object.hasOwn(Memory.current_nest.local_variables, equation[i])){
+                    value = Memory.current_nest.local_variables[equation[i]].value;
                 }
                 else if(Object.hasOwn(Memory.variables, equation[i])){
                     value = Memory.variables[equation[i]].value;
