@@ -14,8 +14,6 @@ class NestingObject{
     local_variables = {};
     skip = false;
 
-    local_code = "";
-
     condition = "";
 
     constructor(depth, token, args = []){ // args is for parameters in function or a condition
@@ -33,7 +31,44 @@ class NestingObject{
         if(this.token == Token.WHILE){
             this.condition = args[0];
         }
+    }
+}
 
+class MethodObject extends NestingObject{
+    name = "";
+    local_code = "";
+    wanted_parameters = [];1
+    token = null;
+
+    constructor(depth, token, args = []){
+        super();
+        this.depth = depth;
+        this.token = token;
+        this.local_code = "";
+        this.wanted_parameters = args;
+    }
+    Run(args = []){
+        this.GetParameters(args);
+        this.skip = false;
+        CSoft.ExecuteLine(this.local_code);
+
+        this.ClearMyScope();
+    }
+
+    GetParameters(args = []){
+        for(let i = 0; i < this.wanted_parameters.length; i++){   
+            if(!args[i]){
+                this.local_variables[this.wanted_parameters[i]] = new Variable(null);
+            }
+            else{
+                this.local_variables[this.wanted_parameters[i]] = new Variable(args[i]);
+            }
+        }
+        Object.entries(this.local_variables).forEach(([k, v]) => {
+        });
+    }
+    ClearMyScope(){
+        this.local_variables = {}; 
     }
 }
 
@@ -61,6 +96,8 @@ class Memory{
     static variables = {
         csoft_version:new Variable("0.0.1")
     };
+
+    static methods = {};
 
     static depth = 0;
     static nest_objects = {};
